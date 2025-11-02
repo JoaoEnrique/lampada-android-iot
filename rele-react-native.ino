@@ -1,62 +1,69 @@
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <WiFiClientSecure.h> // Para HTTPS
+#include <ArduinoJson.h>
 
-const char* ssid = "seu-ssid-wifi";
-const char* password = "sua-senha-wifi";
+const char* ssid = "ssid";
+const char* password = "password";
 
-const char* serverIP = "seu-servidor"; // Endereço do seu servidor
-const int relePin = 4; // GPIO para o relé
+const char* host = "server"; // apenas o domínio (sem https://)
+const int httpsPort = 443;            // porta HTTPS padrão
+const int relePin = 3;                // GPIO usado pelo relé
 
 void setup() {
   Serial.begin(115200);
   pinMode(relePin, OUTPUT);
-  digitalWrite(relePin, HIGH); // Inicialmente desligado
 
+  Serial.println("Conectando ao Wi-Fi...");
   WiFi.begin(ssid, password);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Conectando ao WiFi...");
+    Serial.print(".");
   }
-  Serial.println("Conectado ao WiFi");
+
+  Serial.println("\nConectado ao Wi-Fi!");
+  Serial.print("Endereço IP: ");
+  Serial.println(WiFi.localIP());
 }
 
-void loop() {  
-  WiFiClientSecure client; // Usando WiFiClientSecure para HTTPS
 
-  // Para conexões seguras, você pode precisar adicionar o certificado do servidor:
-   client.setInsecure(); // Descomente esta linha se você não tiver o certificado
-  // Ou, para maior segurança, você pode usar o fingerprint do certificado:
-  // const char* fingerprint = "xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx";
-  // client.setFingerprint(fingerprint);
+void loop() {
+  WiFiClientSecure client;
+  client.setInsecure(); // Ignora verificação SSL (útil para testes)
 
-  if (client.connect(serverIP, 443)) { // Conecta ao servidor na porta 443
-    client.print("GET /atualiza.php HTTP/1.1\r\n");
-    client.print("Host: ");
-    client.print(serverIP);
-    client.print("\r\n");
-    client.print("Connection: close\r\n\r\n");
+  Serial.println("\nConectando ao servidor...");
 
-    Serial.println("Requisição enviada para o servidor.");
-    
-    // Aguardar a resposta do servidor
-    while (client.connected() || client.available()) {
-      if (client.available()) {
-        String line = client.readStringUntil('\n');
-        Serial.println(line); // Mostra a resposta do servidor
-
-        // Controla o relé com base na resposta do servidor
-        if (line.indexOf("desligado") >= 0) {
-          digitalWrite(relePin, HIGH);
-          Serial.println("Relé desligado.");
-        } else if (line.indexOf("ligado") >= 0) {
-          digitalWrite(relePin, LOW);
-          Serial.println("Relé ligado.");
-        }
-      }
-    }
-  } else {
+  if (!client.connect(host, httpsPort)) {
     Serial.println("Falha na conexão com o servidor.");
+    digitalWrite(relePin, HIGH); // Desliga o relé por segurança
+    delay(5000);
+    return;
   }
 
-  delay(10); // Aguarda 5 segundos antes da próxima verificação
+  // Envia a requisição GET
+  client.print("GET /status.php?device=device1 HTTP/1.1\r\n");
+  client.print("Host: ");
+  client.println(host);
+  client.println("Connection: close");
+  client.println();
+
+  // Aguarda resposta do servidor
+  while (client.connected() || client.available()) {
+    if (client.available()) {
+      String line = client.readStringUntil('\n');
+      Serial.println(line);
+
+      // Controla o relé com base na resposta
+      if (line.indexOf("desligar") >= 0) {
+        digitalWrite(relePin, HIGH);
+        Serial.println("Relé desligado.");
+      } else if (line.indexOf("ligar") >= 0) {
+        digitalWrite(relePin, LOW);
+        Serial.println("Relé ligado.");
+      }
+    }
+  }
+
+  client.stop();
+  delay(500);
 }
