@@ -27,7 +27,7 @@ export const Home = () => {
     return (
         <>
             <View style={styles.container}>
-                <Image style={styles.image} source={require("../assets/img/pisca-pisca.png")} />
+                <Image style={styles.image} source={require("../../assets/img/pisca-pisca.png")} />
 
                 {devices.map((device, index) => (
                     <View key={index} style={styles.containerButton}>

@@ -14,8 +14,8 @@ export const getStatus = async (devices: string[]) => {
         for (let device of devices) {
             const response = await api().get(`/status.php?device=${device}`);
 
-            const data = await response.data();
-            newStates[device] = JSON.parse(data).estado === 'ligar';
+            const data = response.data;
+            newStates[device] = data.estado === 'ligar';
         }
         return newStates;
     } catch (error: any) {
