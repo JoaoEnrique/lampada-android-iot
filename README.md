@@ -1,3 +1,6 @@
+https://github.com/user-attachments/assets/d3a13f9f-2ac0-40f0-afc3-6d287f92fce3
+
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
