@@ -1,29 +1,37 @@
 <?php
-// arquivo: atualiza.php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 
-// Define o caminho do arquivo para armazenar o estado
-$estadoFile = 'estado.txt';
+// Caminho do arquivo JSON que armazena o estado de todos os dispositivos
+$estadoFile = 'estado.json';
 
-// Verifica se o arquivo de estado existe, se não cria com valor padrão
+// Cria o arquivo JSON se não existir
 if (!file_exists($estadoFile)) {
-    file_put_contents($estadoFile, 'desligado'); // valor padrão
+    file_put_contents($estadoFile, json_encode([]));
 }
 
-// Verifica se a variável 'novoEstado' foi passada via GET
-if (isset($_GET['novoEstado'])) {
-    $novoEstado = $_GET['novoEstado'];
-    
-    if ($novoEstado === 'ligar') {
-        file_put_contents($estadoFile, 'ligado'); // Atualiza o estado para ligado
-        echo "ligar"; // Resposta que o ESP8266 vai receber
-    } elseif ($novoEstado === 'desligar') {
-        file_put_contents($estadoFile, 'desligado'); // Atualiza o estado para desligado
-        echo "desligar"; // Resposta que o ESP8266 vai receber
-    } else {
-        echo file_get_contents($estadoFile); // Retorna o estado atual se o comando não for válido
-    }
+// Lê o estado atual
+$estados = json_decode(file_get_contents($estadoFile), true);
+
+// Pega o ID do dispositivo e o novo estado via GET
+$deviceId = $_GET['device'] ?? null;
+$novoEstado = $_GET['novoEstado'] ?? null;
+
+// Verifica se o ID foi enviado
+if (!$deviceId) {
+    echo json_encode(["error" => "Dispositivo não especificado"]);
+    exit;
+}
+
+// Atualiza o estado se receber comando válido
+if ($novoEstado === 'ligar' || $novoEstado === 'desligar') {
+    $estados[$deviceId] = $novoEstado;
+    file_put_contents($estadoFile, json_encode($estados));
+    echo json_encode(["estado" => $novoEstado]);
 } else {
-    // Retorna o estado atual se nenhum comando for recebido
-    echo file_get_contents($estadoFile);
+    // Retorna o estado atual do dispositivo
+    $estadoAtual = $estados[$deviceId] ?? 'desligado';
+    echo json_encode(["estado" => $estadoAtual]);
 }
 ?>
